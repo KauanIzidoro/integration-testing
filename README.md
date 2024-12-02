@@ -59,8 +59,8 @@ graph LR
 
     Hidden2_4 --> Output1
     Hidden2_4 --> Output2
-    style Output1 fill:#7FFF7F,stroke:#32CD32,stroke-width:2px
-    style Output2 fill:#FF7F7F,stroke:#FF4500,stroke-width:2px
+    style Output1 fill:#7FFF7F,stroke:#32CD32,stroke-width:2px,color:black
+    style Output2 fill:#FF7F7F,stroke:#FF4500,stroke-width:2px,color:black
     style Input1 fill:#454545,stroke:#454545,stroke-width:2px,color:white
     style Input2 fill:#454545,stroke:#454545,stroke-width:2px,color:white
     style Input3 fill:#454545,stroke:#454545,stroke-width:2px,color:white
