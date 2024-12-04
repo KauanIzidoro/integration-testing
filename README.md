@@ -72,6 +72,4 @@ graph LR
 
 > [Ferramentas](/pages/p3.md)
 
-> [Exemplos](/pages/p4.md)
-
 > [Implementação em um projeto real](/pages/p5.md)
