@@ -1,0 +1,51 @@
+[tool.poetry]
+name = "desktop-app"
+version = "0.1.0"
+description = ""
+authors = [
+    "KauanIzidoro <cnttbussineskauan@gmail.com>",
+    "scryng <gnyrcs@gmail.com>",
+    "gmgpx <gugapires92@gmail.com>",
+    "GBAlvim <gabrielroberto523@gmail.com>"
+]
+readme = "README.md"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic-settings = "^2.6.1"
+streamlit = "^1.40.1"
+requests = "^2.32.3"
+sqlalchemy = "<3.0"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.7.4"
+taskipy = "^1.14.0"
+pytest = "^8.3.3"
+
+[tool.ruff]
+line-length = 79
+extend-exclude = ['migrations']
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[tool.taskipy.tasks]
+lint = 'ruff check . ; ruff check . --diff'
+format = 'ruff check . --fix; ruff format .'
+run3 = 'python3 main.py'
+run = 'python main.py'
+view = 'streamlit run src/1_🏠_Home.py'
+fetch = 'python3 src/Services/integration.py'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

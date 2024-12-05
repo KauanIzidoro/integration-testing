@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./desktop_app",
+        "./desktop_app/src"
+    ]
+}
