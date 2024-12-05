@@ -10,7 +10,10 @@ from Controllers.ProductController import ProductController
 from Controllers.SaleController import SaleController
 from Controllers.StorageController import StorageController
 from models import table_registry
-
+from Services.Payment.CashPaymentStrategy import CashPaymentStrategy
+from Services.Payment.CreditCardPaymentStrategy import CreditCardPaymentStrategy
+from Services.Payment.PixPaymentStrategy import PixPaymentStrategy
+from Services.Payment.PaymentProcessor import PaymentProcessor
 # Configurações do banco de dados
 
 # Obtém o diretório onde o arquivo Python está localizado (no caso, dentro de 'src')
@@ -64,18 +67,17 @@ if 'df' not in st.session_state or st.session_state.df.empty:
 
 @st.dialog('Fechar Pedido', width='small')
 def fechar_pedido():
-    # Título
     st.markdown('### Finalizar Pedido')
     st.divider()
 
-    # Forma de pagamento
+    # Seleção da forma de pagamento
     forma_pagamento = st.radio(
         'Escolha a forma de pagamento:',
-        ['Dinheiro', 'Cartão de Crédito', 'Cartão de Débito', 'Pix'],
+        ['Dinheiro', 'Cartão de Crédito', 'Pix'],
         index=0,
     )
 
-    # Exibir o total do pedido
+    # Verificar se há produtos no carrinho
     if 'carrinho' in st.session_state and st.session_state.carrinho:
         total = sum(
             product['price'] * product['quantity']
@@ -83,71 +85,76 @@ def fechar_pedido():
         )
         st.markdown(f'### Total do Pedido: R$ {total:.2f}')
     else:
-        total = 0
-        st.markdown('### Carrinho está vazio.')
+        st.error('Carrinho está vazio.')
+        return
 
-    # Variáveis para controle
-    valor_entrada = None
-    troco = None
-    pode_confirmar = True  # Por padrão, o botão está habilitado
-
-    # Se a forma de pagamento for "Dinheiro", exigir o valor de entrada
+    # Valor pago (para pagamento em dinheiro)
+    valor_pago = None
     if forma_pagamento == 'Dinheiro':
-        valor_entrada = st.number_input(
+        valor_pago = st.number_input(
             'Digite o valor pago:', min_value=0.0, value=0.0, step=0.01
         )
-        if valor_entrada >= total:
-            troco = valor_entrada - total
-            st.markdown(f'**Troco:** R$ {troco:.2f}')
-        else:
-            pode_confirmar = False  # O botão de confirmar ficará desabilitado
-            st.warning(
-                'O valor pago é menor que o total do pedido. Por favor, insira um valor maior.'
-            )
 
     # Botão para confirmar o pedido
-    confirmar = st.button(
-        'Confirmar Pedido', disabled=(not pode_confirmar or total <= 0)
-    )
+    confirmar = st.button('Confirmar Pedido')
 
-    if confirmar and total > 0:
-        if forma_pagamento == 'Dinheiro' and valor_entrada < total:
-            st.error('O valor pago é insuficiente para finalizar o pedido.')
-        else:
-            try:
-                # Validar estoque antes de processar a venda
-                for product in st.session_state.carrinho:
-                    product_id = product['id']
-                    quantity = product['quantity']
-                    estoque_atual = storageController.get_stock(product_id)
-                    if estoque_atual < quantity:
-                        raise ValueError(
-                            f'Estoque insuficiente para o produto: {product["name"]}'
-                        )
+    if confirmar:
+        try:
+            # Validação do estoque antes de processar o pagamento
+            for product in st.session_state.carrinho:
+                product_id = product['id']
+                quantity = product['quantity']
+                estoque_atual = storageController.get_stock(product_id)
+                if estoque_atual < quantity:
+                    raise ValueError(
+                        f'Estoque insuficiente para o produto: {product["name"]}'
+                    )
 
-                # Criar a venda e processar os itens
-                item_sales = [
-                    {
-                        'product_id': product['id'],
-                        'quantityItem': product['quantity'],
-                    }
-                    for product in st.session_state.carrinho
-                ]
-                saleController.create_sale(
-                    total_sale=total,
-                    item_sales=item_sales,
-                    storage_controller=storageController,
-                )
-                st.success(
-                    f'Pedido fechado com sucesso! Forma de pagamento: {forma_pagamento}.'
-                )
-                st.session_state.carrinho.clear()
-                st.rerun()
-            except ValueError as ve:
-                st.error(str(ve))
-            except Exception as e:
-                st.error(f'Erro ao registrar a venda: {str(e)}')
+            # Escolher a estratégia de pagamento com base na forma de pagamento
+            if forma_pagamento == 'Dinheiro':
+                strategy = CashPaymentStrategy()
+            elif forma_pagamento == 'Cartão de Crédito':
+                strategy = CreditCardPaymentStrategy()
+            elif forma_pagamento == 'Pix':
+                strategy = PixPaymentStrategy()
+            else:
+                raise ValueError("Forma de pagamento inválida.")
 
+            # Processar o pagamento usando a estratégia escolhida
+            processor = PaymentProcessor(strategy)
+            message = processor.process(total, valor_pago=valor_pago)
+            st.success(message)
+
+            # Criar a venda e processar os itens
+            item_sales = [
+                {
+                    'product_id': product['id'],
+                    'quantityItem': product['quantity'],
+                }
+                for product in st.session_state.carrinho
+            ]
+            saleController.create_sale(
+                total_sale=total,
+                item_sales=item_sales,
+                storage_controller=storageController,
+            )
+
+            # Atualizar o estoque (essa lógica depende de como você gerencia o estoque no DB)
+            for product in st.session_state.carrinho:
+                product_id = product['id']
+                quantity_sold = product['quantity']
+                storageController.update_stock(product_id, -quantity_sold)
+
+            st.success(f'Pedido fechado com sucesso! Forma de pagamento: {forma_pagamento}.')
+            st.session_state.carrinho.clear()
+            st.rerun()
+
+        except ValueError as ve:
+            st.error(str(ve))
+        except Exception as e:
+            st.error(f'Erro ao processar o pagamento: {str(e)}')
+
+    # Caso o carrinho esteja vazio, ou se o usuário tentar confirmar sem itens
     elif confirmar:
         st.error('Não há itens no carrinho para finalizar o pedido.')
 
