@@ -9,6 +9,7 @@ export class AppService {
   }
 
   postDataFetch(dataFromDesktop): Record<string,unknown> {
+    console.log(dataFromDesktop);
     return dataFromDesktop;
   }
 

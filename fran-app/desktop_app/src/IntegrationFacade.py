@@ -5,6 +5,7 @@ from Controllers.ItemSaleController import ItemSaleController
 from Controllers.ProductController import ProductController
 from Controllers.SaleController import SaleController
 from Controllers.StorageController import StorageController
+
 from models import ItemSale, Product, Sale, Storage
 
 
@@ -31,6 +32,18 @@ class IntegrationFacade:
 
     def list_products(self) -> list[Product]:
         return self.product_controller.list_products()
+    
+    def list_products_in_dict(self):
+        products = self.session.query(Product).all()
+        return {
+            product.product_id: {
+                "name": product.name,
+                "description": product.description,
+                "price": product.price
+            }
+            for product in products
+        }
+        
 
     def delete_product(self, product_id: int):
         self.product_controller.delete_product(product_id)
